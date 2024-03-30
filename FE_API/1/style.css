@@ -1,0 +1,32 @@
+body {
+  margin: 0;
+  padding: 0;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  user-select: none;
+}
+
+ul span {
+  font-size: 20px;
+  user-select: none;
+}
+
+.bi-x-lg {
+  color: red;
+}
+
+.bi-check-lg {
+  color: green;
+}
+
+.input-group-text {
+  cursor: pointer;
+  transition: 0.5s;
+}
+
+.input-group-text:hover {
+  color: var(--bs-blue);
+}
