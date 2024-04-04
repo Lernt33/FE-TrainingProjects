@@ -1,116 +1,69 @@
-const validators = document.querySelectorAll(".validator");
-const passwordInput = document.querySelector("#password");
-const generateBtn = document.querySelector("#generateBtn");
-const eyeBtn = document.querySelector("#eyeBtn");
-const ProgressBar =document.getElementById("ProgressBar")
-const validatorIcons = {
-  check: '<i class="bi bi-check-lg"></i>',
-  xMark: '<i class="bi bi-x-lg"></i>',
+const searchBtn = document.querySelector("#searchBtn");
+const qrTextInput = document.querySelector("#qrText");
+const displayQR = document.querySelector("#displayQR");
+
+const config = {
+  API_URL: "https://api.everrest.educata.dev",
 };
 
-const config ={
-  countTrue:0,
-}
-
-const icon = {
-  open: '<i class="bi bi-eye-slash"></i>',
-  closed: '<i class="bi bi-eye"></i>',
-};
-
-eyeBtn.addEventListener("click", () => {
-  const isEyeOpen = passwordInput.type === "text";
-  passwordInput.type = isEyeOpen ? "password" : "text";
-  eyeBtn.innerHTML = isEyeOpen ? icon.closed : icon.open;
+searchBtn.addEventListener("click", () => {
+  generateQrCode(qrTextInput.value.trim());
 });
 
-generateBtn.addEventListener("click", () => {
-  let randomPassword = getRandomPassword(12);
-  passwordInput.value = randomPassword;
-
-  if (passwordInput.type === "password") {
-    eyeBtn.click();
-  }
-
-  let isGoodPassword = false;
-
-  while (!isGoodPassword) {
-    randomPassword = getRandomPassword(12);
-    validatePassword(randomPassword);
-    for (const [index, validator] of validators.entries()) {
-      if (validator.innerHTML === validatorIcons.xMark) {
-        isGoodPassword = false;
-        break;
-      }
-      if (index + 1 === validators.length) {
-        isGoodPassword = true;
-      }
-    }
+qrTextInput.addEventListener("keyup", function (event) {
+  if (event.key === "Enter") {
+    generateQrCode(this.value.trim());
   }
 });
 
-passwordInput.addEventListener("keyup", function () {
-  validatePassword(this.value);
-});
-
-function validatePassword(password) {
-  const validations = [password.length >= 8,
-    password.length <= 22,
-    /\w/.test(password),
-    /[a-z]/.test(password),
-    /[A-Z]/.test(password),
-    /\d/.test(password),
-    /[^\w\s]/g.test(password)
-  ]
-  // validators[0].innerHTML = getValidatorIcon(password.length >= 8);
-  // validators[1].innerHTML = getValidatorIcon(password.length <= 22);
-  // validators[2].innerHTML = getValidatorIcon(/\w/.test(password));
-  // validators[3].innerHTML = getValidatorIcon(/[a-z]/.test(password));
-  // validators[4].innerHTML = getValidatorIcon(/[A-Z]/.test(password));
-  // validators[5].innerHTML = getValidatorIcon(/\d/.test(password));
-  // validators[6].innerHTML = getValidatorIcon(/[^\w\s]/g.test(password));
-
-  validators.forEach((el,index)=>{
-    el.innerHTML = getValidatorIcon(validations[index])
-    config.countTrue = validations.reduce((acc, currentValue) => currentValue ? acc + 1 : acc, 0);
-    // if (validations[index]){
-    //   console.log(validations[index])
-    //   ProgressBar.style.width = `${Number(ProgressBar.style.width.split('%')[0]) + 100/7}%`
-    // }
-    // if validations[index]{
-    //   ProgressBar.style.width = `${Number(ProgressBar.style.width.split('%')[0])-100/7}%`
-    // }
-  })
-
-  if (password.length === 0) {
-    validators.forEach((validator) => {
-      validator.innerHTML = "•";
-      config.countTrue = 0
-    });
+async function generateQrCode(text) {
+  if (text.length === 0) {
+    return;
   }
-  bar()
-}
-
-function getValidatorIcon(condition) {
-  return condition ? validatorIcons.check : validatorIcons.xMark;
-}
-
-function getRandomPassword(length = 12) {
-  const passwordCharSet =
-    "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm1234567890!@#$%^&";
-  let password = "";
-  for (let i = 0; i < length; i++) {
-    password +=
-      passwordCharSet[Math.floor(Math.random() * passwordCharSet.length)];
+  qrTextInput.value = "";
+  try {
+    const qrResponse = await xhrRequest(
+      "POST",
+      `${config.API_URL}/qrcode/generate`,
+      { text }
+    );
+    displayQR.innerHTML = `
+      <ul>
+        <li>Text: ${qrResponse.text}</li>
+        <li>Format: ${qrResponse.format}</li>
+        <li>Type: ${qrResponse.type}</li>
+        <li>Error correction level: ${qrResponse.errorCorrectionLevel}</li>
+      </ul>
+      <img class="mt-3 img-thumbnail" src="${qrResponse.result}" alt="${qrResponse.text} generated code" onclick="downloadImage(this)">
+    `;
+  } catch (err) {
+    console.log(err);
   }
-  return password;
 }
 
-function bar(){
-  ProgressBar.style.width = `${(Math.floor(config.countTrue)/7)*100}%`
-  return ProgressBar.style.width
+function xhrRequest(method, url, body = {}) {
+  const xhr = new XMLHttpRequest();
+  xhr.open(method, url);
+  if (method !== "GET") {
+    xhr.setRequestHeader("Content-Type", "application/json");
+  }
+  xhr.send(JSON.stringify(body));
+  return new Promise((resolve, reject) => {
+    xhr.onerror = () => {
+      reject(JSON.parse(xhr.responseText));
+    };
+    xhr.onload = () => {
+      resolve(JSON.parse(xhr.responseText));
+    };
+  });
 }
 
-/*
-  დავამატოთ bootstrap progress bar
-  https://getbootstrap.com/docs/5.3/components/progress/
-*/
+function downloadImage(image) {
+  const a = document.createElement("a");
+  a.setAttribute("href", image.src);
+  a.setAttribute("download", `${image.alt}.png`);
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
